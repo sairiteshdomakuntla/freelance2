@@ -7,8 +7,10 @@ WebBrowser.maybeCompleteAuthSession();
 
 export async function googleLogin() {
   try {
-    // Always use production URL for the redirect
-    const redirectUrl = 'https://freelance2-cxyi.onrender.com';
+    // Use custom scheme for mobile, web URL for web
+    const redirectUrl = Platform.OS === 'web' 
+      ? 'https://freelance2-cxyi.onrender.com'
+      : 'client://auth-callback';
     
     // Better Auth uses /sign-in/google endpoint (with hyphen)
     const authUrl = `${API_BASE_URL}/api/auth/sign-in/google`;
