@@ -19,7 +19,7 @@ Update `server/.env`:
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/freelance2
 BETTER_AUTH_SECRET=supersecretlongrandomstringchangethisinproduction
-BETTER_AUTH_URL=http://localhost:5000
+BETTER_AUTH_URL=https://freelance2-cxyi.onrender.com
 GOOGLE_CLIENT_ID=your-google-client-id-here
 GOOGLE_CLIENT_SECRET=your-google-client-secret-here
 ```
@@ -30,7 +30,7 @@ cd server
 npm start
 ```
 
-The backend runs on `http://localhost:5000`
+The backend runs on `https://freelance2-cxyi.onrender.com`
 
 ### Backend Features
 - Better Auth with MongoDB adapter
@@ -112,7 +112,7 @@ npm start
 1. Go to [Google Cloud Console](https://console.cloud.google.com)
 2. Create a project and enable Google+ API
 3. Create OAuth 2.0 credentials
-4. Add authorized redirect URI: `http://localhost:5000/api/auth/callback/google`
+4. Add authorized redirect URI: `https://freelance2-cxyi.onrender.com/api/auth/callback/google`
 5. Update `.env` with your client ID and secret
 6. Update `client/lib/googleLogin.ts` with your client ID
 

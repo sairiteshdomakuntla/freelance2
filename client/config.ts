@@ -3,7 +3,7 @@
 // For testing on physical device: use your computer's IP address (e.g., '192.168.1.100')
 
 // Uncomment the appropriate line based on your testing environment:
-export const API_BASE_URL = 'http://localhost:5000';  // For web/emulator
+export const API_BASE_URL = 'https://freelance2-cxyi.onrender.com';  // For web/emulator
 // export const API_BASE_URL = 'http://172.28.107.178:5000';  // For physical device
 
 // Note: Phone OTP (Twilio) works with IP address

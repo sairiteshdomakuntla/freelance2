@@ -18,7 +18,13 @@ const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_T
 
 // Middleware - CORS configuration for Better Auth
 app.use(cors({
-  origin: ['http://localhost:8081', 'http://localhost:19006', 'http://localhost:19000'],
+  origin: [
+    'http://localhost:8081', 
+    'http://localhost:19006', 
+    'http://localhost:19000',
+    'https://freelance2-cxyi.onrender.com',
+    process.env.BETTER_AUTH_URL
+  ].filter(Boolean),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -49,7 +55,7 @@ app.use('/api/auth', async (req, res, next) => {
   
   // Handle Google OAuth manually
   if (req.path === '/sign-in/google' || req.path === '/signin/google') {
-    const currentURL = req.query.currentURL || 'http://localhost:8081';
+    const currentURL = req.query.currentURL || process.env.BETTER_AUTH_URL || 'https://freelance2-cxyi.onrender.com';
     const redirectURI = `${process.env.BETTER_AUTH_URL}/api/auth/callback/google`;
     
     // Redirect to Google OAuth
@@ -70,7 +76,7 @@ app.use('/api/auth', async (req, res, next) => {
   if (req.path === '/callback/google' && req.query.code) {
     try {
       const code = req.query.code;
-      const returnURL = req.query.state || 'http://localhost:8081';
+      const returnURL = req.query.state || process.env.BETTER_AUTH_URL || 'https://freelance2-cxyi.onrender.com';
       
       console.log('🔙 Google callback received, exchanging code for tokens...');
       
@@ -185,7 +191,7 @@ app.use('/api/auth', async (req, res, next) => {
       
     } catch (error) {
       console.error('❌ Google OAuth callback error:', error);
-      return res.redirect(`${req.query.state || 'http://localhost:8081'}?error=auth_failed`);
+      return res.redirect(`${req.query.state || process.env.BETTER_AUTH_URL || 'https://freelance2-cxyi.onrender.com'}?error=auth_failed`);
     }
   }
   

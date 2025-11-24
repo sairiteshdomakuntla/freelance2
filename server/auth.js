@@ -22,6 +22,9 @@ async function createAuth() {
   console.log('Google Client ID:', process.env.GOOGLE_CLIENT_ID ? '✓ Set' : '✗ Missing');
   console.log('Google Client Secret:', process.env.GOOGLE_CLIENT_SECRET ? '✓ Set' : '✗ Missing');
   console.log('Base URL:', process.env.BETTER_AUTH_URL);
+  
+  const redirectURI = `${process.env.BETTER_AUTH_URL}/api/auth/callback/google`;
+  console.log('Google Redirect URI:', redirectURI);
 
   const authInstance = betterAuth({
     baseURL: process.env.BETTER_AUTH_URL,
@@ -31,6 +34,7 @@ async function createAuth() {
       'http://localhost:8081',
       'http://localhost:19006',
       'http://localhost:19000',
+      'https://freelance2-cxyi.onrender.com',
       process.env.BETTER_AUTH_URL,
     ],
     
@@ -40,7 +44,7 @@ async function createAuth() {
       google: {
         clientId: process.env.GOOGLE_CLIENT_ID || '',
         clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-        redirectURI: `${process.env.BETTER_AUTH_URL}/api/auth/callback/google`,
+        redirectURI: redirectURI,
       },
     },
 
