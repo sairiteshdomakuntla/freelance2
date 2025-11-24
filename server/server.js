@@ -52,11 +52,15 @@ app.use('/api/auth', async (req, res, next) => {
   }
   
   console.log(`📍 Better Auth request: ${req.method} ${req.path}`);
+  console.log(`📍 Query params:`, req.query);
   
-  // Handle Google OAuth manually
+  // Handle Google OAuth manually - MUST be before Better Auth handler
   if (req.path === '/sign-in/google' || req.path === '/signin/google') {
     const currentURL = req.query.currentURL || process.env.BETTER_AUTH_URL || 'https://freelance2-cxyi.onrender.com';
     const redirectURI = `${process.env.BETTER_AUTH_URL || 'https://freelance2-cxyi.onrender.com'}/api/auth/callback/google`;
+    
+    console.log('🔍 Sign-in initiated - currentURL:', currentURL);
+    console.log('🔍 redirectURI:', redirectURI);
     
     // Redirect to Google OAuth
     const googleAuthUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + 
@@ -72,11 +76,16 @@ app.use('/api/auth', async (req, res, next) => {
     return res.redirect(googleAuthUrl);
   }
   
-  // Handle Google OAuth callback
-  if (req.path === '/callback/google' && req.query.code) {
-    try {
-      const code = req.query.code;
-      const returnURL = req.query.state || process.env.BETTER_AUTH_URL || 'https://freelance2-cxyi.onrender.com';
+  // Handle Google OAuth callback - intercept BEFORE Better Auth
+  if (req.path === '/callback/google') {
+    console.log('🔙 Callback path matched!');
+    console.log('🔙 Has code?', !!req.query.code);
+    console.log('🔙 State:', req.query.state);
+    
+    if (req.query.code) {
+      try {
+        const code = req.query.code;
+        const returnURL = req.query.state || process.env.BETTER_AUTH_URL || 'https://freelance2-cxyi.onrender.com';
       
       console.log('🔙 Google callback received, exchanging code for tokens...');
       
@@ -193,6 +202,9 @@ app.use('/api/auth', async (req, res, next) => {
       console.error('❌ Google OAuth callback error:', error);
       const fallbackURL = req.query.state || process.env.BETTER_AUTH_URL || 'https://freelance2-cxyi.onrender.com';
       return res.redirect(`${fallbackURL}?error=auth_failed`);
+    }
+    } else {
+      console.log('❌ No code in callback, passing to Better Auth');
     }
   }
   
