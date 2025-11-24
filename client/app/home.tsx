@@ -1,159 +1,219 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { itemsAPI } from '../services/api';
-import { Item } from '../types/item';
+import { authClient } from '../lib/authClient';
+import { userAPI } from '../services/api';
+import type { User } from '../types/user';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [session, setSession] = useState<any>(null);
-  const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     checkSession();
-    fetchItems();
   }, []);
 
   const checkSession = async () => {
     try {
-      const token = await AsyncStorage.getItem('session_token');
-      const userStr = await AsyncStorage.getItem('user');
+      const session = await authClient.getSession();
       
-      if (!token || !userStr) {
+      if (!session) {
+        console.log('No session found, redirecting to login');
         router.replace('/login');
-      } else {
-        const user = JSON.parse(userStr);
-        setSession({ user });
+        return;
+      }
+
+      console.log('Session found, fetching profile...');
+
+      // Fetch user profile
+      try {
+        const profile = await userAPI.getProfile();
+        console.log('Profile fetched:', profile.email);
+        setUser(profile);
+        
+        // If user hasn't selected a role, redirect to role selection
+        if (!profile.role || profile.role === 'Customer') {
+          // Check if this is a new user (just registered)
+          const daysSinceCreated = Math.floor(
+            (Date.now() - new Date(profile.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          
+          if (daysSinceCreated === 0) {
+            router.replace('/select-role');
+            return;
+          }
+        }
+      } catch (profileError: any) {
+        console.error('Profile fetch failed:', profileError);
+        // If profile fetch fails, user might not be properly authenticated
+        Alert.alert(
+          'Authentication Error',
+          'Unable to fetch your profile. Please log in again.',
+          [{ text: 'OK', onPress: () => router.replace('/login') }]
+        );
+        return;
       }
     } catch (error) {
       console.error('Session check failed:', error);
       router.replace('/login');
-    }
-  };
-
-  const fetchItems = async () => {
-    try {
-      setLoading(true);
-      const data = await itemsAPI.getAll();
-      setItems(data);
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to fetch items');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreate = async () => {
-    if (!name.trim()) {
-      Alert.alert('Error', 'Name is required');
-      return;
-    }
-
-    try {
-      await itemsAPI.create({ name, description });
-      setName('');
-      setDescription('');
-      fetchItems();
-      Alert.alert('Success', 'Item created successfully');
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create item');
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await itemsAPI.delete(id);
-      fetchItems();
-      Alert.alert('Success', 'Item deleted successfully');
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to delete item');
-    }
-  };
-
   const handleLogout = async () => {
     try {
-      await AsyncStorage.removeItem('session_token');
-      await AsyncStorage.removeItem('user');
+      await authClient.signOut();
       router.replace('/login');
     } catch (error: any) {
       console.error('Logout error:', error);
-      // Force logout even if error
       router.replace('/login');
     }
   };
 
-  const renderItem = ({ item }: { item: Item }) => (
-    <View style={styles.itemCard}>
-      <View style={styles.itemContent}>
-        <Text style={styles.itemName}>{item.name}</Text>
-        {item.description && (
-          <Text style={styles.itemDescription}>{item.description}</Text>
-        )}
-        <Text style={styles.itemDate}>
-          {new Date(item.createdAt).toLocaleDateString()}
-        </Text>
+  const navigateToProfile = () => {
+    router.push('/profile');
+  };
+
+  const navigateToAdmin = () => {
+    router.push('/admin');
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#007AFF" />
       </View>
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={() => handleDelete(item._id)}
-      >
-        <Text style={styles.deleteButtonText}>Delete</Text>
-      </TouchableOpacity>
-    </View>
-  );
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Items Manager</Text>
-          {session?.user && (
-            <Text style={styles.userInfo}>
-              {session.user.phoneNumber || session.user.email}
-            </Text>
-          )}
+          <Text style={styles.title}>Event Management</Text>
+          <Text style={styles.userInfo}>
+            Welcome, {user.name}!
+          </Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleText}>{user.role}</Text>
+          </View>
         </View>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.form}>
-        <TextInput
-          style={styles.input}
-          placeholder="Item name"
-          value={name}
-          onChangeText={setName}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Description (optional)"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-        />
-        <TouchableOpacity style={styles.addButton} onPress={handleCreate}>
-          <Text style={styles.addButtonText}>Add Item</Text>
-        </TouchableOpacity>
-      </View>
+      <View style={styles.content}>
+        {/* Quick Actions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          
+          <TouchableOpacity style={styles.actionCard} onPress={navigateToProfile}>
+            <Text style={styles.actionEmoji}>👤</Text>
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>My Profile</Text>
+              <Text style={styles.actionDescription}>
+                View and edit your profile information
+              </Text>
+            </View>
+          </TouchableOpacity>
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#007AFF" style={styles.loader} />
-      ) : (
-        <FlatList
-          data={items}
-          renderItem={renderItem}
-          keyExtractor={(item) => item._id}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No items yet. Create one!</Text>
-          }
-        />
-      )}
+          {user.role === 'Admin' && (
+            <TouchableOpacity style={styles.actionCard} onPress={navigateToAdmin}>
+              <Text style={styles.actionEmoji}>⚙️</Text>
+              <View style={styles.actionContent}>
+                <Text style={styles.actionTitle}>Admin Dashboard</Text>
+                <Text style={styles.actionDescription}>
+                  Manage users and system settings
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+
+          {user.role === 'Vendor' && (
+            <>
+              <TouchableOpacity style={styles.actionCard}>
+                <Text style={styles.actionEmoji}>📅</Text>
+                <View style={styles.actionContent}>
+                  <Text style={styles.actionTitle}>My Events</Text>
+                  <Text style={styles.actionDescription}>
+                    Manage your upcoming events
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.actionCard}>
+                <Text style={styles.actionEmoji}>💼</Text>
+                <View style={styles.actionContent}>
+                  <Text style={styles.actionTitle}>Services</Text>
+                  <Text style={styles.actionDescription}>
+                    Manage your service offerings
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {user.role === 'Customer' && (
+            <>
+              <TouchableOpacity style={styles.actionCard}>
+                <Text style={styles.actionEmoji}>🔍</Text>
+                <View style={styles.actionContent}>
+                  <Text style={styles.actionTitle}>Browse Events</Text>
+                  <Text style={styles.actionDescription}>
+                    Discover and book events
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.actionCard}>
+                <Text style={styles.actionEmoji}>📋</Text>
+                <View style={styles.actionContent}>
+                  <Text style={styles.actionTitle}>My Bookings</Text>
+                  <Text style={styles.actionDescription}>
+                    View your event bookings
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+
+        {/* Account Status */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account Status</Text>
+          <View style={styles.statusCard}>
+            <View style={styles.statusRow}>
+              <Text style={styles.statusLabel}>Account Status:</Text>
+              <View style={[styles.statusBadge, user.isActive ? styles.activeStatus : styles.inactiveStatus]}>
+                <Text style={styles.statusText}>
+                  {user.isActive ? 'Active' : 'Disabled'}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.statusRow}>
+              <Text style={styles.statusLabel}>Email Verified:</Text>
+              <Text style={styles.statusValue}>
+                {user.emailVerified ? '✓ Yes' : '✗ No'}
+              </Text>
+            </View>
+            {user.phoneNumber && (
+              <View style={styles.statusRow}>
+                <Text style={styles.statusLabel}>Phone Verified:</Text>
+                <Text style={styles.statusValue}>
+                  {user.phoneNumberVerified ? '✓ Yes' : '✗ No'}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </View>
     </View>
   );
 }
@@ -162,27 +222,46 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
-    padding: 20,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
+    backgroundColor: '#007AFF',
+    padding: 20,
+    paddingTop: 60,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 40,
-    marginBottom: 20,
+    alignItems: 'flex-start',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#fff',
   },
   userInfo: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 16,
+    color: '#fff',
     marginTop: 4,
+    opacity: 0.9,
+  },
+  roleBadge: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  roleText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 12,
   },
   logoutButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: 'rgba(255,59,48,0.9)',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
@@ -192,89 +271,88 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  form: {
+  content: {
+    flex: 1,
+    padding: 20,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  actionCard: {
     backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 10,
-    fontSize: 16,
+  actionEmoji: {
+    fontSize: 32,
+    marginRight: 16,
   },
-  addButton: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  addButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  list: {
-    paddingBottom: 20,
-  },
-  itemCard: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  itemContent: {
+  actionContent: {
     flex: 1,
   },
-  itemName: {
+  actionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
     marginBottom: 4,
   },
-  itemDescription: {
+  actionDescription: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 4,
   },
-  itemDate: {
-    fontSize: 12,
-    color: '#999',
+  statusCard: {
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  deleteButton: {
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 6,
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  deleteButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  loader: {
-    marginTop: 50,
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: '#999',
+  statusLabel: {
     fontSize: 16,
-    marginTop: 50,
+    color: '#666',
+  },
+  statusValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  activeStatus: {
+    backgroundColor: '#34C759',
+  },
+  inactiveStatus: {
+    backgroundColor: '#FF3B30',
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
