@@ -164,8 +164,18 @@ export default function SettingsScreen() {
         text: 'Logout',
         style: 'destructive',
         onPress: async () => {
-          await AsyncStorage.removeItem('session_token');
-          router.replace('/login');
+          try {
+            // Clear AsyncStorage session
+            await AsyncStorage.removeItem('session_token');
+            await AsyncStorage.removeItem('user');
+            
+            console.log('✅ Logged out successfully');
+            router.replace('/login');
+          } catch (error) {
+            console.error('Logout error:', error);
+            // Still redirect even if clear fails
+            router.replace('/login');
+          }
         },
       },
     ]);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authClient } from '../lib/authClient';
 import { userAPI } from '../services/api';
 import type { User } from '../types/user';
@@ -59,10 +60,20 @@ export default function HomeScreen() {
 
   const handleLogout = async () => {
     try {
+      // Clear AsyncStorage session
+      await AsyncStorage.removeItem('session_token');
+      await AsyncStorage.removeItem('user');
+      
+      // Call Better Auth signOut
       await authClient.signOut();
+      
+      console.log('✅ Logged out successfully');
       router.replace('/login');
     } catch (error: any) {
       console.error('Logout error:', error);
+      // Still clear local storage and redirect even if signOut fails
+      await AsyncStorage.removeItem('session_token');
+      await AsyncStorage.removeItem('user');
       router.replace('/login');
     }
   };

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authClient } from '../lib/authClient';
 import { googleLogin } from '../lib/googleLogin';
 
@@ -8,6 +9,22 @@ export default function LoginScreen() {
   const router = useRouter();
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Clear any existing session when login screen loads
+    clearExistingSession();
+  }, []);
+
+  const clearExistingSession = async () => {
+    try {
+      console.log('🧹 Clearing any existing session data');
+      await AsyncStorage.removeItem('session_token');
+      await AsyncStorage.removeItem('user');
+      console.log('✅ Session cleared');
+    } catch (error) {
+      console.error('Failed to clear session:', error);
+    }
+  };
 
   const sendOtp = async () => {
     if (!phone.trim()) {
