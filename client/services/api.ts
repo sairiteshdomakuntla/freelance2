@@ -31,9 +31,14 @@ const request = async (endpoint: string, options: RequestInit = {}) => {
     console.log('📡 Response status:', response.status);
     
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Request failed' }));
-      console.error('❌ API Error:', error);
-      throw new Error(error.message || `HTTP ${response.status}`);
+      const errorData = await response.json().catch(() => ({ message: 'Request failed' }));
+      console.error('❌ API Error:', errorData);
+      
+      // Create error object with additional data for conflict errors
+      const error: any = new Error(errorData.message || `HTTP ${response.status}`);
+      error.status = response.status;
+      error.data = errorData;
+      throw error;
     }
 
     const data = await response.json();
@@ -62,6 +67,27 @@ export const userAPI = {
     request('/users/me/role', {
       method: 'PUT',
       body: JSON.stringify({ role }),
+    }),
+  
+  // Link phone number to account
+  linkPhone: (phoneNumber: string): Promise<User> => 
+    request('/users/me/link-phone', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber }),
+    }),
+  
+  // Link email to account
+  linkEmail: (email: string): Promise<User> => 
+    request('/users/me/link-email', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  
+  // Merge another account into current account
+  mergeAccount: (targetAccountId: string): Promise<User> => 
+    request('/users/me/merge-account', {
+      method: 'POST',
+      body: JSON.stringify({ targetAccountId }),
     }),
 };
 

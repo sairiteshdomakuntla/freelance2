@@ -29,20 +29,15 @@ export default function HomeScreen() {
       // Fetch user profile
       try {
         const profile = await userAPI.getProfile();
-        console.log('Profile fetched:', profile.email);
+        console.log('Profile fetched:', profile.email, 'Role:', profile.role);
         setUser(profile);
         
-        // If user hasn't selected a role, redirect to role selection
-        if (!profile.role || profile.role === 'Customer') {
-          // Check if this is a new user (just registered)
-          const daysSinceCreated = Math.floor(
-            (Date.now() - new Date(profile.createdAt).getTime()) / (1000 * 60 * 60 * 24)
-          );
-          
-          if (daysSinceCreated === 0) {
-            router.replace('/select-role');
-            return;
-          }
+        // If user hasn't selected a role yet, redirect to role selection
+        // Only redirect if role is not set at all (undefined or null)
+        if (!profile.role) {
+          console.log('No role set, redirecting to role selection');
+          router.replace('/select-role');
+          return;
         }
       } catch (profileError: any) {
         console.error('Profile fetch failed:', profileError);
@@ -124,9 +119,19 @@ export default function HomeScreen() {
             </View>
           </TouchableOpacity>
 
+          <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/settings')}>
+            <Text style={styles.actionEmoji}>⚙️</Text>
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>Account Settings</Text>
+              <Text style={styles.actionDescription}>
+                Manage account, link email/phone, security
+              </Text>
+            </View>
+          </TouchableOpacity>
+
           {user.role === 'Admin' && (
             <TouchableOpacity style={styles.actionCard} onPress={navigateToAdmin}>
-              <Text style={styles.actionEmoji}>⚙️</Text>
+              <Text style={styles.actionEmoji}>🛡️</Text>
               <View style={styles.actionContent}>
                 <Text style={styles.actionTitle}>Admin Dashboard</Text>
                 <Text style={styles.actionDescription}>

@@ -111,12 +111,13 @@ router.put('/me/role', verifyAuth, async (req, res) => {
     const db = mongoose.connection.db;
     const usersCollection = db.collection('user');
     
-    // Check if user already has a non-default role
+    // Check if user already has a role set
     const user = await usersCollection.findOne({ 
       _id: new mongoose.Types.ObjectId(req.user.id) 
     });
     
-    if (user.role && user.role !== 'Customer') {
+    // If role is already set, don't allow changing it
+    if (user.role) {
       return res.status(400).json({ 
         message: 'Role has already been set and cannot be changed' 
       });

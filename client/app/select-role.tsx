@@ -23,17 +23,14 @@ export default function SelectRoleScreen() {
 
     try {
       setLoading(true);
-      await userAPI.setRole(selectedRole);
-      Alert.alert('Success', 'Role set successfully', [
-        {
-          text: 'OK',
-          onPress: () => router.replace('/home'),
-        },
-      ]);
+      const updatedUser = await userAPI.setRole(selectedRole);
+      console.log('Role set successfully:', updatedUser);
+      
+      // Navigate to home without showing alert to prevent loop
+      router.replace('/home');
     } catch (error: any) {
       console.error('Failed to set role:', error);
       Alert.alert('Error', error.message || 'Failed to set role');
-    } finally {
       setLoading(false);
     }
   };
