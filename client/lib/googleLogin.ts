@@ -2,15 +2,20 @@ import * as WebBrowser from 'expo-web-browser';
 import { API_BASE_URL } from './authClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import { makeRedirectUri } from 'expo-auth-session';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export async function googleLogin() {
   try {
-    // Use custom scheme for mobile, web URL for web
-    const redirectUrl = Platform.OS === 'web' 
-      ? 'https://freelance2-cxyi.onrender.com'
-      : 'client://auth-callback';
+    // Use Expo's redirect URI helper - this creates a proxy URL for mobile
+    const redirectUrl = makeRedirectUri({
+      scheme: 'client',
+      path: 'auth-callback',
+    });
+    
+    console.log('🔑 Platform:', Platform.OS);
+    console.log('🔙 Generated Redirect URL:', redirectUrl);
     
     // Better Auth uses /sign-in/google endpoint (with hyphen)
     const authUrl = `${API_BASE_URL}/api/auth/sign-in/google`;
@@ -20,15 +25,15 @@ export async function googleLogin() {
     
     const fullAuthUrl = `${authUrl}?${params.toString()}`;
     
-    console.log('Opening Google OAuth:', fullAuthUrl);
-    console.log('Redirect URL:', redirectUrl);
+    console.log('🔑 Opening Google OAuth:', fullAuthUrl);
     
     const result = await WebBrowser.openAuthSessionAsync(
       fullAuthUrl,
       redirectUrl
     );
     
-    console.log('Google OAuth result:', result);
+    console.log('📱 Google OAuth result type:', result.type);
+    console.log('📱 Google OAuth result:', JSON.stringify(result, null, 2));
     
     if (result.type === 'success' && result.url) {
       // Parse the callback URL to get session data
