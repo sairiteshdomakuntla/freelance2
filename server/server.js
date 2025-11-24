@@ -11,6 +11,18 @@ const twilio = require('twilio');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Force production URL if deployed on Render
+if (process.env.RENDER) {
+  process.env.BETTER_AUTH_URL = process.env.BETTER_AUTH_URL || `https://${process.env.RENDER_EXTERNAL_HOSTNAME}`;
+}
+
+console.log('🌐 Environment:', {
+  PORT,
+  BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+  RENDER: process.env.RENDER ? 'Yes' : 'No',
+  RENDER_EXTERNAL_HOSTNAME: process.env.RENDER_EXTERNAL_HOSTNAME
+});
+
 // Initialize Twilio
 const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
   ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
@@ -57,6 +69,11 @@ app.use('/api/auth', async (req, res, next) => {
   if (req.path === '/sign-in/google' || req.path === '/signin/google') {
     const currentURL = req.query.currentURL || process.env.BETTER_AUTH_URL || 'https://freelance2-cxyi.onrender.com';
     const redirectURI = `${process.env.BETTER_AUTH_URL}/api/auth/callback/google`;
+    
+    console.log('🔍 OAuth Debug Info:');
+    console.log('  - BETTER_AUTH_URL:', process.env.BETTER_AUTH_URL);
+    console.log('  - currentURL:', currentURL);
+    console.log('  - redirectURI:', redirectURI);
     
     // Redirect to Google OAuth
     const googleAuthUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + 
