@@ -307,6 +307,42 @@ const setupAuthRoutes = (app, auth) => {
       }
     }
     
+    // Handle sign-out to properly clear session cookies
+    if (req.path === '/sign-out' && req.method === 'POST') {
+      try {
+        console.log('🚪 Sign-out request received');
+        
+        // Get session token from cookie or request body
+        const sessionToken = req.cookies['better-auth.session_token'] || req.body?.sessionToken;
+        
+        if (sessionToken) {
+          // Delete session from database
+          const db = mongoose.connection.db;
+          const sessionsCollection = db.collection('session');
+          
+          await sessionsCollection.deleteOne({ token: sessionToken });
+          console.log('✅ Session deleted from database');
+        }
+        
+        // Clear the session cookie
+        res.clearCookie('better-auth.session_token', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/'
+        });
+        
+        console.log('✅ Session cookie cleared');
+        
+        return res.json({ success: true, message: 'Signed out successfully' });
+      } catch (error) {
+        console.error('❌ Sign-out error:', error);
+        return res.status(500).json({
+          error: { code: 'SIGNOUT_ERROR', message: 'Failed to sign out' }
+        });
+      }
+    }
+    
     return toNodeHandler(auth)(req, res);
   });
 };

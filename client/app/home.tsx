@@ -60,12 +60,12 @@ export default function HomeScreen() {
 
   const handleLogout = async () => {
     try {
-      // Clear AsyncStorage session
+      // Call Better Auth signOut FIRST to clear server session
+      await authClient.signOut();
+      
+      // Then clear AsyncStorage session
       await AsyncStorage.removeItem('session_token');
       await AsyncStorage.removeItem('user');
-      
-      // Call Better Auth signOut
-      await authClient.signOut();
       
       console.log('✅ Logged out successfully');
       router.replace('/login');

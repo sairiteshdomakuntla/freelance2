@@ -165,7 +165,10 @@ export default function SettingsScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            // Clear AsyncStorage session
+            // Call Better Auth signOut FIRST to clear server session
+            await authClient.signOut();
+            
+            // Then clear AsyncStorage session
             await AsyncStorage.removeItem('session_token');
             await AsyncStorage.removeItem('user');
             
@@ -173,7 +176,9 @@ export default function SettingsScreen() {
             router.replace('/login');
           } catch (error) {
             console.error('Logout error:', error);
-            // Still redirect even if clear fails
+            // Still clear local storage and redirect even if signOut fails
+            await AsyncStorage.removeItem('session_token');
+            await AsyncStorage.removeItem('user');
             router.replace('/login');
           }
         },

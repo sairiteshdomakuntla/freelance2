@@ -18,9 +18,19 @@ export default function LoginScreen() {
   const clearExistingSession = async () => {
     try {
       console.log('🧹 Clearing any existing session data');
+      
+      // Call server signOut to clear cookies first
+      try {
+        await authClient.signOut();
+        console.log('✅ Server session cleared');
+      } catch (error) {
+        console.log('⚠️ Server signOut failed (may not have active session):', error);
+      }
+      
+      // Then clear local storage
       await AsyncStorage.removeItem('session_token');
       await AsyncStorage.removeItem('user');
-      console.log('✅ Session cleared');
+      console.log('✅ Local session cleared');
     } catch (error) {
       console.error('Failed to clear session:', error);
     }
