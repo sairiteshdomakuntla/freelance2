@@ -69,25 +69,18 @@ export const userAPI = {
       body: JSON.stringify({ role }),
     }),
   
-  // Link phone number to account
-  linkPhone: (phoneNumber: string): Promise<User> => 
-    request('/users/me/link-phone', {
-      method: 'POST',
-      body: JSON.stringify({ phoneNumber }),
-    }),
-  
-  // Link email to account
-  linkEmail: (email: string): Promise<User> => 
-    request('/users/me/link-email', {
-      method: 'POST',
+  // Add email to phone-authenticated account
+  addEmail: (email: string): Promise<User> => 
+    request('/users/me/email', {
+      method: 'PUT',
       body: JSON.stringify({ email }),
     }),
   
-  // Merge another account into current account
-  mergeAccount: (targetAccountId: string): Promise<User> => 
-    request('/users/me/merge-account', {
-      method: 'POST',
-      body: JSON.stringify({ targetAccountId }),
+  // Add phone to email-authenticated account
+  addPhone: (phoneNumber: string): Promise<User> => 
+    request('/users/me/phone', {
+      method: 'PUT',
+      body: JSON.stringify({ phoneNumber }),
     }),
 };
 

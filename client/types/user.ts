@@ -18,7 +18,7 @@ export interface Address {
 
 export interface User {
   id: string;
-  email: string;
+  email: string | null;
   emailVerified: boolean;
   phoneNumber?: string;
   phoneNumberVerified?: boolean;

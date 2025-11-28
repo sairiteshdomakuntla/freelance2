@@ -22,6 +22,10 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [formData, setFormData] = useState<UpdateProfileData>({});
+  const [emailInput, setEmailInput] = useState('');
+  const [phoneInput, setPhoneInput] = useState('');
+  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [showPhoneInput, setShowPhoneInput] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -64,6 +68,48 @@ export default function ProfileScreen() {
     } catch (error: any) {
       console.error('Failed to update profile:', error);
       Alert.alert('Error', error.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddEmail = async () => {
+    if (!emailInput.trim() || !emailInput.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const updated = await userAPI.addEmail(emailInput);
+      setUser(updated);
+      setEmailInput('');
+      setShowEmailInput(false);
+      Alert.alert('Success', 'Email added successfully to your account');
+    } catch (error: any) {
+      console.error('Failed to add email:', error);
+      Alert.alert('Error', error.data?.message || error.message || 'Failed to add email');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddPhone = async () => {
+    if (!phoneInput.trim() || !phoneInput.startsWith('+')) {
+      Alert.alert('Error', 'Please enter a valid phone number with country code (e.g., +91)');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const updated = await userAPI.addPhone(phoneInput);
+      setUser(updated);
+      setPhoneInput('');
+      setShowPhoneInput(false);
+      Alert.alert('Success', 'Phone number added successfully. Please verify it via OTP.');
+    } catch (error: any) {
+      console.error('Failed to add phone:', error);
+      Alert.alert('Error', error.data?.message || error.message || 'Failed to add phone number');
     } finally {
       setSaving(false);
     }
@@ -132,14 +178,57 @@ export default function ProfileScreen() {
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={[styles.input, styles.disabled]}
-            value={user.email}
-            editable={false}
-          />
+          {user.email ? (
+            <TextInput
+              style={[styles.input, styles.disabled]}
+              value={user.email}
+              editable={false}
+            />
+          ) : showEmailInput ? (
+            <View>
+              <TextInput
+                style={styles.input}
+                value={emailInput}
+                onChangeText={setEmailInput}
+                placeholder="Enter your email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={[styles.smallButton, styles.cancelButton]}
+                  onPress={() => {
+                    setShowEmailInput(false);
+                    setEmailInput('');
+                  }}
+                  disabled={saving}
+                >
+                  <Text style={styles.smallButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.smallButton, styles.saveButton]}
+                  onPress={handleAddEmail}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.smallButtonText}>Add Email</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowEmailInput(true)}
+            >
+              <Text style={styles.addButtonText}>+ Add Email Address</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {user.phoneNumber && (
+        {user.phoneNumber ? (
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Phone Number</Text>
             <TextInput
@@ -147,6 +236,50 @@ export default function ProfileScreen() {
               value={user.phoneNumber}
               editable={false}
             />
+          </View>
+        ) : showPhoneInput ? (
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Phone Number</Text>
+            <TextInput
+              style={styles.input}
+              value={phoneInput}
+              onChangeText={setPhoneInput}
+              placeholder="+91xxxxxxxxxx"
+              keyboardType="phone-pad"
+            />
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.smallButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowPhoneInput(false);
+                  setPhoneInput('');
+                }}
+                disabled={saving}
+              >
+                <Text style={styles.smallButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.smallButton, styles.saveButton]}
+                onPress={handleAddPhone}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.smallButtonText}>Add Phone</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Phone Number</Text>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowPhoneInput(true)}
+            >
+              <Text style={styles.addButtonText}>+ Add Phone Number</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -330,5 +463,41 @@ const styles = StyleSheet.create({
   logoutButton: {
     backgroundColor: '#FF3B30',
     marginTop: 20,
+  },
+  addButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    gap: 10,
+  },
+  smallButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#999',
+  },
+  saveButton: {
+    backgroundColor: '#007AFF',
+  },
+  smallButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

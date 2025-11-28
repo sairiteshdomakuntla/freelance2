@@ -211,9 +211,6 @@ const setupAuthRoutes = (app, auth) => {
             let user = await usersCollection.findOne({ phoneNumber });
             
             if (!user) {
-              // Check if user exists with any method (email-based account)
-              // This helps link phone login to existing email account
-              // Note: This is a simple approach - in production, you'd want explicit account linking
               console.log('No existing user found with phone number, creating new user:', phoneNumber);
               
               const userId = new mongoose.Types.ObjectId();
@@ -222,7 +219,8 @@ const setupAuthRoutes = (app, auth) => {
                 id: userId.toString(),
                 phoneNumber,
                 phoneNumberVerified: true,
-                email: `${phoneNumber.replace(/[^0-9]/g, '')}@phone.user`,
+                // Don't create a temporary email - leave it as null
+                email: null,
                 emailVerified: false,
                 name: phoneNumber,
                 createdAt: new Date(),

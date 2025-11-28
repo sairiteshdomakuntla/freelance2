@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../services/api';
+import { userAPI } from '../services/api';
+import { authClient } from '../lib/authClient';
 
 export default function SettingsScreen() {
   const [loading, setLoading] = useState(true);
@@ -29,7 +30,7 @@ export default function SettingsScreen() {
   const loadUserProfile = async () => {
     try {
       setLoading(true);
-      const profile = await api.request('/api/users/me');
+      const profile = await userAPI.getProfile();
       setUser(profile);
     } catch (error) {
       console.error('Failed to load profile:', error);
@@ -47,37 +48,13 @@ export default function SettingsScreen() {
 
     try {
       setLinkingPhone(true);
-      await api.request('/api/users/me/link-phone', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: phoneNumber.trim() }),
-      });
+      await userAPI.addPhone(phoneNumber.trim());
 
       Alert.alert('Success', 'Phone number linked successfully');
       setPhoneNumber('');
       loadUserProfile();
     } catch (error: any) {
-      if (error.status === 409) {
-        // Conflict - phone already exists on another account
-        setConflictAccount({
-          type: 'phone',
-          identifier: phoneNumber.trim(),
-          existingAccountId: error.data?.existingAccountId,
-        });
-        Alert.alert(
-          'Account Already Exists',
-          'This phone number is already linked to another account. Would you like to merge the accounts?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Merge Accounts',
-              onPress: () => handleMergeAccount(error.data?.existingAccountId),
-            },
-          ]
-        );
-      } else {
-        Alert.alert('Error', error.message || 'Failed to link phone number');
-      }
+      Alert.alert('Error', error.data?.message || error.message || 'Failed to link phone number');
     } finally {
       setLinkingPhone(false);
     }
@@ -91,70 +68,22 @@ export default function SettingsScreen() {
 
     try {
       setLinkingEmail(true);
-      await api.request('/api/users/me/link-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() }),
-      });
+      await userAPI.addEmail(email.trim());
 
       Alert.alert('Success', 'Email linked successfully');
       setEmail('');
       loadUserProfile();
     } catch (error: any) {
-      if (error.status === 409) {
-        // Conflict - email already exists on another account
-        setConflictAccount({
-          type: 'email',
-          identifier: email.trim(),
-          existingAccountId: error.data?.existingAccountId,
-        });
-        Alert.alert(
-          'Account Already Exists',
-          'This email is already linked to another account. Would you like to merge the accounts?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Merge Accounts',
-              onPress: () => handleMergeAccount(error.data?.existingAccountId),
-            },
-          ]
-        );
-      } else {
-        Alert.alert('Error', error.message || 'Failed to link email');
-      }
+      Alert.alert('Error', error.data?.message || error.message || 'Failed to link email');
     } finally {
       setLinkingEmail(false);
     }
   };
 
   const handleMergeAccount = async (targetAccountId: string) => {
-    try {
-      setLoading(true);
-      await api.request('/api/users/me/merge-account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetAccountId }),
-      });
-
-      Alert.alert(
-        'Success',
-        'Accounts merged successfully. Please log in again.',
-        [
-          {
-            text: 'OK',
-            onPress: async () => {
-              await AsyncStorage.removeItem('session_token');
-              router.replace('/login');
-            },
-          },
-        ]
-      );
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to merge accounts');
-    } finally {
-      setLoading(false);
-      setConflictAccount(null);
-    }
+    // This feature is not implemented yet - removed for now
+    Alert.alert('Not Implemented', 'Account merging is not available yet.');
+    setConflictAccount(null);
   };
 
   const handleLogout = async () => {
